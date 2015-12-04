@@ -117,6 +117,10 @@ struct player {
     unsigned char *fdm;
 # endif
 
+    unsigned char *buff;
+    unsigned long buff_len;
+    unsigned long buff_cur;
+
     unsigned char *data;
     unsigned long length;
 
@@ -193,6 +197,8 @@ struct player {
 
 void player_init(struct player *);
 void player_finish(struct player *);
+
+int play_one_buff(struct player *player, unsigned char const *buff, unsigned int buff_len);
 
 int player_run(struct player *, int, char const *[]);
 

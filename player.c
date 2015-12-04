@@ -28,6 +28,8 @@
 # include <stdio.h>
 # include <stdarg.h>
 # include <stdlib.h>
+#include <curl/curl.h>
+#include <curl/easy.h>
 
 # ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
@@ -115,6 +117,8 @@ static int tty_fd = -1;
 static struct termios save_tty;
 static struct sigaction save_sigtstp, save_sigint;
 # endif
+static int setup_filters(struct player *player);
+static int silence(struct player *player, mad_timer_t duration, char const *label);
 
 /*
  * NAME:	player_init()
@@ -145,6 +149,9 @@ void player_init(struct player *player)
 # if defined(HAVE_MMAP)
   player->input.fdm    = 0;
 # endif
+  player->input.buff = NULL;
+  player->input.buff_cur = 0;
+  player->input.buff_len = 0;
   player->input.data   = 0;
   player->input.length = 0;
   player->input.eof    = 0;
@@ -467,6 +474,55 @@ enum mad_flow decode_input_mmap(void *data, struct mad_stream *stream)
   return MAD_FLOW_CONTINUE;
 }
 # endif
+
+/*
+ * NAME:	decode->input_read()
+ * DESCRIPTION:	(re)fill decoder input buffer by reading a file descriptor
+ */
+static
+enum mad_flow decode_input_read_buff(void *data, struct mad_stream *stream)
+{
+  struct player *player = data;
+  struct input *input = &player->input;
+  int cpy_len = 0;
+
+  //static int tmp = 0;
+  //if (tmp++ == 1) {
+  //    tmp = 0;
+  //    sleep(5);
+  //}
+
+
+  if (input->eof)
+    return MAD_FLOW_STOP;
+
+  if (stream->next_frame) {
+    memmove(input->data, stream->next_frame,
+	    input->length = &input->data[input->length] - stream->next_frame);
+  }
+
+  do {
+    if (input->buff_len - input->buff_cur > MPEG_BUFSZ - input->length) {
+        cpy_len = MPEG_BUFSZ - input->length;
+    }
+    else {
+        cpy_len = input->buff_len - input->buff_cur;
+        input->eof = 1;
+    }
+    memcpy(input->data + input->length, input->buff + input->buff_cur, cpy_len);
+    input->buff_cur += cpy_len;
+  } while(0);
+
+  assert(cpy_len >= MAD_BUFFER_GUARD);
+
+  while (cpy_len < MAD_BUFFER_GUARD) {
+    input->data[input->length + cpy_len++] = 0;
+  }
+
+  mad_stream_buffer(stream, input->data, input->length += cpy_len);
+
+  return MAD_FLOW_CONTINUE;
+}
 
 /*
  * NAME:	decode->input_read()
@@ -1220,7 +1276,7 @@ void process_id3(struct id3_tag const *tag, struct player *player)
 	 * in milliseconds, represented as a numeric string."
 	 */
 
-	ms = atol(latin1);
+	ms = atol((char *)latin1);
 	if (ms > 0)
 	  mad_timer_set(&player->stats.total_time, 0, ms, 1000);
 
@@ -1332,6 +1388,7 @@ void process_id3(struct id3_tag const *tag, struct player *player)
 	mad_bit_init(&ptr, data);
 
 	peak = mad_bit_read(&ptr, 32) << 5;
+    printf("mad_bit_read:%d\n", peak);
 
 	rgain_parse(&rgain[0], &ptr);
 	rgain_parse(&rgain[1], &ptr);
@@ -1782,6 +1839,100 @@ enum mad_flow decode_error(void *data, struct mad_stream *stream,
 }
 
 /*
+ * NAME:	decode_buff()
+ * DESCRIPTION:	decode and output audio for an open file
+ */
+static
+int decode_buff(struct player *player, unsigned char const *buff, unsigned int len)
+{
+  struct stat stat;
+  struct mad_decoder decoder;
+  int options, result;
+
+  //if (fstat(player->input.fd, &stat) == -1) {
+  //  error("decode", ":fstat");
+  //  return -1;
+  //}
+
+  if (S_ISREG(stat.st_mode))
+    player->stats.total_bytes = stat.st_size;
+
+  tag_init(&player->input.tag);
+
+  /* prepare input buffers */
+
+#if 0
+# if defined(HAVE_MMAP)
+  if (S_ISREG(stat.st_mode) && stat.st_size > 0) {
+    player->input.length = stat.st_size;
+
+    player->input.fdm = map_file(player->input.fd, player->input.length);
+    if (player->input.fdm == 0 && player->verbosity >= 0)
+      error("decode", ":mmap");
+
+    player->input.data = player->input.fdm;
+  }
+# endif
+#else
+  player->input.buff = (unsigned char *)buff;
+  player->input.buff_len = len;
+  player->input.buff_cur = 0;
+#endif
+
+  if (player->input.data == 0) {
+    player->input.data = malloc(MPEG_BUFSZ);
+    if (player->input.data == 0) {
+      error("decode", _("not enough memory to allocate input buffer"));
+      return -1;
+    }
+
+    player->input.length = 0;
+  }
+
+  player->input.eof = 0;
+
+  /* reset statistics */
+  player->stats.absolute_timer        = mad_timer_zero;
+  player->stats.play_timer            = mad_timer_zero;
+  player->stats.absolute_framecount   = 0;
+  player->stats.play_framecount       = 0;
+  player->stats.error_frame           = -1;
+  player->stats.vbr                   = 0;
+  player->stats.bitrate               = 0;
+  player->stats.vbr_frames            = 0;
+  player->stats.vbr_rate              = 0;
+  player->stats.audio.clipped_samples = 0;
+  player->stats.audio.peak_clipping   = 0;
+  player->stats.audio.peak_sample     = 0;
+
+  mad_decoder_init(&decoder, player,
+		   decode_input_read_buff,
+		   decode_header, decode_filter,
+		   player->output.command ? decode_output : 0,
+		   decode_error, 0);
+
+  options = 0;
+  if (player->options & PLAYER_OPTION_DOWNSAMPLE)
+    options |= MAD_OPTION_HALFSAMPLERATE;
+  if (player->options & PLAYER_OPTION_IGNORECRC)
+    options |= MAD_OPTION_IGNORECRC;
+
+  mad_decoder_options(&decoder, options);
+
+  result = mad_decoder_run(&decoder, MAD_DECODER_MODE_SYNC);
+
+  mad_decoder_finish(&decoder);
+
+  if (player->input.data) {
+    free(player->input.data);
+    player->input.data = 0;
+  }
+
+  tag_finish(&player->input.tag);
+
+  return result;
+}
+/*
  * NAME:	decode()
  * DESCRIPTION:	decode and output audio for an open file
  */
@@ -1887,6 +2038,147 @@ int decode(struct player *player)
   return result;
 }
 
+int player_set(struct player *player){
+  union audio_control control;
+
+  /* set up filters */
+
+  if (setup_filters(player) == -1) {
+    error("filter", _("not enough memory to allocate filters"));
+    return -1;
+  }
+
+  set_gain(player, 0, 0);
+
+  /* initialize audio */
+
+  if (player->output.command) {
+    audio_control_init(&control, AUDIO_COMMAND_INIT);
+    control.init.path = player->output.path;
+
+    if (player->output.command(&control) == -1) {
+      error("audio", audio_error, control.init.path);
+      return -1;
+    }
+
+    if ((player->options & PLAYER_OPTION_SKIP) &&
+	mad_timer_sign(player->global_start) < 0) {
+      player->stats.global_timer = player->global_start;
+
+      if (silence(player, mad_timer_abs(player->global_start),
+		  _("lead-in")) == -1)
+	  return -1;
+    }
+  }
+  return 0;
+}
+
+/*
+ * NAME:	play_one_buff()
+ * DESCRIPTION:	open and play a single file
+ */
+int play_one_buff(struct player *player, unsigned char const *buff, unsigned int buff_len)
+{
+  //char const *file = player->playlist.entries[player->playlist.current];
+  int result;
+  unsigned int id3_tag_len = 0;
+
+  printf("output.command:%p \n\n", player->output.command);
+  //player->output.command = audio_alsa;
+  //player->output.path = NULL;
+  if (0 != player_set(player)) {
+      printf("audio init err\n");
+      return -1;
+  }
+  if (player->verbosity >= 0 &&
+      player->playlist.length > 1)
+    message(">> %s\n", player->input.path);
+
+  /* reset file information */
+
+  player->stats.total_bytes = 0;
+  player->stats.total_time  = mad_timer_zero;
+
+  if (!(player->options & PLAYER_OPTION_IGNOREVOLADJ))
+    set_gain(player, GAIN_VOLADJ, 0);
+
+  player->output.replay_gain &= ~PLAYER_RGAIN_SET;
+
+  /* try reading ID3 tag information now (else read later from stream) */
+  //{
+  //  //int fd;
+  //  struct id3_file *file;
+
+  //  player->options &= ~PLAYER_OPTION_STREAMID3;
+
+  //  //fd = dup(player->input.fd);
+  //  file = id3_file_open(buff, ID3_FILE_MODE_READONLY);
+  //  if (file == 0) {
+  //    //close(fd);
+  //    player->options |= PLAYER_OPTION_STREAMID3;
+  //  }
+  //  else {
+  //    process_id3(id3_file_tag(file), player);
+  //    id3_file_close(file);
+  //  }
+  //}
+  id3_tag_len = (buff[6]&0x7F)<<21 | (buff[7]&0x7F)<<14 | (buff[8]&0x7F)<<7 | (buff[9]&0x7F);
+  printf("%x %x %x %x\n", buff[6], buff[7], buff[8], buff[9]);
+  printf("id3_tag_len %d, buff_len %d\n", id3_tag_len, buff_len);
+  if (buff_len < id3_tag_len) {
+      return -1;
+  }
+
+  result = decode_buff(player, buff + id3_tag_len + 10, buff_len - id3_tag_len - 10);
+  //result = decode_buff(player, buff, buff_len);
+#if 0
+  if (result == 0 && player->verbosity >= 0 &&
+      !(player->options & PLAYER_OPTION_SHOWTAGSONLY)) {
+    char time_str[19], db_str[7];
+    char const *peak_str;
+    mad_fixed_t peak;
+
+    mad_timer_string(player->stats.play_timer, time_str, "%lu:%02u:%02u.%1u",
+		     MAD_UNITS_HOURS, MAD_UNITS_DECISECONDS, 0);
+
+# if defined(HAVE_LOCALECONV)
+    {
+      char *point;
+
+      point = strchr(time_str, '.');
+      if (point)
+	*point = *localeconv()->decimal_point;
+    }
+# endif
+
+    peak = MAD_F_ONE + player->stats.audio.peak_clipping;
+    if (peak == MAD_F_ONE)
+      peak = player->stats.audio.peak_sample;
+
+    if (peak == 0)
+      peak_str = "-inf";
+    else {
+      sprintf(db_str, "%+.1f", 20 * log10(mad_f_todouble(peak)));
+      peak_str = db_str;
+    }
+
+    message("%lu %s (%s), %s dB %s, %lu %s\n",
+	    player->stats.play_framecount, player->stats.play_framecount == 1 ?
+	    _("frame decoded") : _("frames decoded"), time_str,
+	    peak_str, _("peak amplitude"), player->stats.audio.clipped_samples,
+	    player->stats.audio.clipped_samples == 1 ?
+	    _("clipped sample") : _("clipped samples"));
+  }
+#endif
+  //if (player->input.fd != STDIN_FILENO &&
+  //    close(player->input.fd) == -1 && result == 0) {
+  //  error(0, ":", player->input.path);
+  //  result = -1;
+  //}
+
+  return result;
+}
+
 /*
  * NAME:	play_one()
  * DESCRIPTION:	open and play a single file
@@ -1897,6 +2189,8 @@ int play_one(struct player *player)
   char const *file = player->playlist.entries[player->playlist.current];
   int result;
 
+  printf("output.command:%p \n\n", player->output.command);
+  player->output.command = audio_alsa;
   if (strcmp(file, "-") == 0) {
     if (isatty(STDIN_FILENO)) {
       error(0, "%s: %s", _("stdin"), _("is a tty"));
@@ -1930,23 +2224,23 @@ int play_one(struct player *player)
   player->output.replay_gain &= ~PLAYER_RGAIN_SET;
 
   /* try reading ID3 tag information now (else read later from stream) */
-  {
-    int fd;
-    struct id3_file *file;
+  //{
+  //  int fd;
+  //  struct id3_file *file;
 
-    player->options &= ~PLAYER_OPTION_STREAMID3;
+  //  player->options &= ~PLAYER_OPTION_STREAMID3;
 
-    fd = dup(player->input.fd);
-    file = id3_file_fdopen(fd, ID3_FILE_MODE_READONLY);
-    if (file == 0) {
-      close(fd);
-      player->options |= PLAYER_OPTION_STREAMID3;
-    }
-    else {
-      process_id3(id3_file_tag(file), player);
-      id3_file_close(file);
-    }
-  }
+  //  fd = dup(player->input.fd);
+  //  file = id3_file_fdopen(fd, ID3_FILE_MODE_READONLY);
+  //  if (file == 0) {
+  //    close(fd);
+  //    player->options |= PLAYER_OPTION_STREAMID3;
+  //  }
+  //  else {
+  //    process_id3(id3_file_tag(file), player);
+  //    id3_file_close(file);
+  //  }
+  //}
 
   result = decode(player);
 
@@ -2816,3 +3110,54 @@ int player_run(struct player *player, int argc, char const *argv[])
 
   return result;
 }
+#if 0
+static unsigned int recv_len = 0;
+static unsigned char buff[2 * 1024 * 1024];
+
+//可以采用POST或GET或其他的方式进行，下面以POST方式为例：
+size_t write_data(void * ptr, size_t size, size_t nmemb, void * stream)
+{
+    memcpy(stream + recv_len, ptr, size * nmemb);
+    recv_len += size * nmemb;
+    //printf("write_data: size %d, nmemb %d, recv_len %d\n", size, nmemb, recv_len);
+    return size * nmemb;
+}
+
+int main(int argc, char * argv[])
+{
+    CURL * curl;
+    struct player player = {0};
+
+    if (argc != 2){
+        printf("argc must eq 2\n");
+        return -1;
+    }
+
+    player_init(&player);
+    //player.output.command = audio_alsa;
+    player.output.command = audio_output(0);
+
+    curl_global_init(CURL_GLOBAL_ALL);
+
+    curl = curl_easy_init();
+
+    char * data = "name=xxx";    // post到server的内容
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data);  // 设置POST的方式
+    curl_easy_setopt(curl, CURLOPT_URL, argv[1]);  // 设置server的URL
+
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buff);    // 设置write_data函数的最后一个参数的地址
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);  // 设置server的返回的数据的接收方式
+
+    curl_easy_perform(curl);
+    curl_easy_cleanup(curl);
+
+    printf("\nrecv_len %d, buff : %s\n", recv_len, buff);
+    FILE* fp = fopen("./tmp.mp3", "w+");
+    fwrite(buff, 1, recv_len, fp);
+    fclose(fp);
+
+    play_one_buff(&player, buff, recv_len);
+
+    return 0;
+}
+#endif

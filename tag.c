@@ -115,7 +115,7 @@ int parse_lame(struct tag_lame *lame,
 {
   struct mad_bitptr save = *ptr;
   unsigned long magic;
-  char const *version;
+  unsigned char const *version;
 
   if (*bitlen < 36 * 8)
     goto fail;

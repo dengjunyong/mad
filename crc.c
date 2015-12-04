@@ -76,7 +76,7 @@ unsigned short const crc_table[256] = {
  * NAME:	crc->compute()
  * DESCRIPTION:	calculate reflected CRC-16 value (polynomial 0x8005)
  */
-unsigned short crc_compute(char const *data, unsigned int length,
+unsigned short crc_compute(unsigned char const *data, unsigned int length,
 			   unsigned short init)
 {
   register unsigned int crc;

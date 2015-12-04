@@ -1,0 +1,54 @@
+make  all-recursive
+make[1]: 正在进入目录 `/home/danger/projects/mad/madplay-0.15.2b'
+Making all in intl
+make[2]: 正在进入目录 `/home/danger/projects/mad/madplay-0.15.2b/intl'
+make[2]: 没有什么可以做的为 `all'。
+make[2]:正在离开目录 `/home/danger/projects/mad/madplay-0.15.2b/intl'
+Making all in po
+make[2]: 正在进入目录 `/home/danger/projects/mad/madplay-0.15.2b/po'
+make[2]: 没有什么可以做的为 `all'。
+make[2]:正在离开目录 `/home/danger/projects/mad/madplay-0.15.2b/po'
+make[2]: 正在进入目录 `/home/danger/projects/mad/madplay-0.15.2b'
+if gcc -DHAVE_CONFIG_H -I. -I. -I. -Iintl -DLOCALEDIR=\"/usr/local/share/locale\"    -Wall -march=i486 -g -O2 -MT madplay.o -MD -MP -MF ".deps/madplay.Tpo" -c -o madplay.o madplay.c; \
+	then mv -f ".deps/madplay.Tpo" ".deps/madplay.Po"; else rm -f ".deps/madplay.Tpo"; exit 1; fi
+if gcc -DHAVE_CONFIG_H -I. -I. -I. -Iintl -DLOCALEDIR=\"/usr/local/share/locale\"    -Wall -march=i486 -g -O2 -MT getopt.o -MD -MP -MF ".deps/getopt.Tpo" -c -o getopt.o getopt.c; \
+	then mv -f ".deps/getopt.Tpo" ".deps/getopt.Po"; else rm -f ".deps/getopt.Tpo"; exit 1; fi
+if gcc -DHAVE_CONFIG_H -I. -I. -I. -Iintl -DLOCALEDIR=\"/usr/local/share/locale\"    -Wall -march=i486 -g -O2 -MT getopt1.o -MD -MP -MF ".deps/getopt1.Tpo" -c -o getopt1.o getopt1.c; \
+	then mv -f ".deps/getopt1.Tpo" ".deps/getopt1.Po"; else rm -f ".deps/getopt1.Tpo"; exit 1; fi
+if gcc -DHAVE_CONFIG_H -I. -I. -I. -Iintl -DLOCALEDIR=\"/usr/local/share/locale\"    -Wall -march=i486 -g -O2 -MT version.o -MD -MP -MF ".deps/version.Tpo" -c -o version.o version.c; \
+	then mv -f ".deps/version.Tpo" ".deps/version.Po"; else rm -f ".deps/version.Tpo"; exit 1; fi
+if gcc -DHAVE_CONFIG_H -I. -I. -I. -Iintl -DLOCALEDIR=\"/usr/local/share/locale\"    -Wall -march=i486 -g -O2 -MT resample.o -MD -MP -MF ".deps/resample.Tpo" -c -o resample.o resample.c; \
+	then mv -f ".deps/resample.Tpo" ".deps/resample.Po"; else rm -f ".deps/resample.Tpo"; exit 1; fi
+if gcc -DHAVE_CONFIG_H -I. -I. -I. -Iintl -DLOCALEDIR=\"/usr/local/share/locale\"    -Wall -march=i486 -g -O2 -MT filter.o -MD -MP -MF ".deps/filter.Tpo" -c -o filter.o filter.c; \
+	then mv -f ".deps/filter.Tpo" ".deps/filter.Po"; else rm -f ".deps/filter.Tpo"; exit 1; fi
+if gcc -DHAVE_CONFIG_H -I. -I. -I. -Iintl -DLOCALEDIR=\"/usr/local/share/locale\"    -Wall -march=i486 -g -O2 -MT tag.o -MD -MP -MF ".deps/tag.Tpo" -c -o tag.o tag.c; \
+	then mv -f ".deps/tag.Tpo" ".deps/tag.Po"; else rm -f ".deps/tag.Tpo"; exit 1; fi
+if gcc -DHAVE_CONFIG_H -I. -I. -I. -Iintl -DLOCALEDIR=\"/usr/local/share/locale\"    -Wall -march=i486 -g -O2 -MT crc.o -MD -MP -MF ".deps/crc.Tpo" -c -o crc.o crc.c; \
+	then mv -f ".deps/crc.Tpo" ".deps/crc.Po"; else rm -f ".deps/crc.Tpo"; exit 1; fi
+if gcc -DHAVE_CONFIG_H -I. -I. -I. -Iintl -DLOCALEDIR=\"/usr/local/share/locale\"    -Wall -march=i486 -g -O2 -MT rgain.o -MD -MP -MF ".deps/rgain.Tpo" -c -o rgain.o rgain.c; \
+	then mv -f ".deps/rgain.Tpo" ".deps/rgain.Po"; else rm -f ".deps/rgain.Tpo"; exit 1; fi
+if gcc -DHAVE_CONFIG_H -I. -I. -I. -Iintl -DLOCALEDIR=\"/usr/local/share/locale\"    -Wall -march=i486 -g -O2 -MT player.o -MD -MP -MF ".deps/player.Tpo" -c -o player.o player.c; \
+	then mv -f ".deps/player.Tpo" ".deps/player.Po"; else rm -f ".deps/player.Tpo"; exit 1; fi
+if gcc -DHAVE_CONFIG_H -I. -I. -I. -Iintl -DLOCALEDIR=\"/usr/local/share/locale\"    -Wall -march=i486 -g -O2 -MT audio.o -MD -MP -MF ".deps/audio.Tpo" -c -o audio.o audio.c; \
+	then mv -f ".deps/audio.Tpo" ".deps/audio.Po"; else rm -f ".deps/audio.Tpo"; exit 1; fi
+if gcc -DHAVE_CONFIG_H -I. -I. -I. -Iintl -DLOCALEDIR=\"/usr/local/share/locale\"    -Wall -march=i486 -g -O2 -MT audio_aiff.o -MD -MP -MF ".deps/audio_aiff.Tpo" -c -o audio_aiff.o audio_aiff.c; \
+	then mv -f ".deps/audio_aiff.Tpo" ".deps/audio_aiff.Po"; else rm -f ".deps/audio_aiff.Tpo"; exit 1; fi
+if gcc -DHAVE_CONFIG_H -I. -I. -I. -Iintl -DLOCALEDIR=\"/usr/local/share/locale\"    -Wall -march=i486 -g -O2 -MT audio_cdda.o -MD -MP -MF ".deps/audio_cdda.Tpo" -c -o audio_cdda.o audio_cdda.c; \
+	then mv -f ".deps/audio_cdda.Tpo" ".deps/audio_cdda.Po"; else rm -f ".deps/audio_cdda.Tpo"; exit 1; fi
+if gcc -DHAVE_CONFIG_H -I. -I. -I. -Iintl -DLOCALEDIR=\"/usr/local/share/locale\"    -Wall -march=i486 -g -O2 -MT audio_hex.o -MD -MP -MF ".deps/audio_hex.Tpo" -c -o audio_hex.o audio_hex.c; \
+	then mv -f ".deps/audio_hex.Tpo" ".deps/audio_hex.Po"; else rm -f ".deps/audio_hex.Tpo"; exit 1; fi
+if gcc -DHAVE_CONFIG_H -I. -I. -I. -Iintl -DLOCALEDIR=\"/usr/local/share/locale\"    -Wall -march=i486 -g -O2 -MT audio_null.o -MD -MP -MF ".deps/audio_null.Tpo" -c -o audio_null.o audio_null.c; \
+	then mv -f ".deps/audio_null.Tpo" ".deps/audio_null.Po"; else rm -f ".deps/audio_null.Tpo"; exit 1; fi
+if gcc -DHAVE_CONFIG_H -I. -I. -I. -Iintl -DLOCALEDIR=\"/usr/local/share/locale\"    -Wall -march=i486 -g -O2 -MT audio_raw.o -MD -MP -MF ".deps/audio_raw.Tpo" -c -o audio_raw.o audio_raw.c; \
+	then mv -f ".deps/audio_raw.Tpo" ".deps/audio_raw.Po"; else rm -f ".deps/audio_raw.Tpo"; exit 1; fi
+if gcc -DHAVE_CONFIG_H -I. -I. -I. -Iintl -DLOCALEDIR=\"/usr/local/share/locale\"    -Wall -march=i486 -g -O2 -MT audio_snd.o -MD -MP -MF ".deps/audio_snd.Tpo" -c -o audio_snd.o audio_snd.c; \
+	then mv -f ".deps/audio_snd.Tpo" ".deps/audio_snd.Po"; else rm -f ".deps/audio_snd.Tpo"; exit 1; fi
+if gcc -DHAVE_CONFIG_H -I. -I. -I. -Iintl -DLOCALEDIR=\"/usr/local/share/locale\"    -Wall -march=i486 -g -O2 -MT audio_wave.o -MD -MP -MF ".deps/audio_wave.Tpo" -c -o audio_wave.o audio_wave.c; \
+	then mv -f ".deps/audio_wave.Tpo" ".deps/audio_wave.Po"; else rm -f ".deps/audio_wave.Tpo"; exit 1; fi
+if gcc -DHAVE_CONFIG_H -I. -I. -I. -Iintl -DLOCALEDIR=\"/usr/local/share/locale\"    -Wall -march=i486 -g -O2 -MT audio_alsa.o -MD -MP -MF ".deps/audio_alsa.Tpo" -c -o audio_alsa.o audio_alsa.c; \
+	then mv -f ".deps/audio_alsa.Tpo" ".deps/audio_alsa.Po"; else rm -f ".deps/audio_alsa.Tpo"; exit 1; fi
+/bin/bash ./libtool --mode=link gcc  -Wall -march=i486 -g -O2   -o madplay  madplay.o getopt.o getopt1.o version.o resample.o filter.o tag.o crc.o rgain.o player.o audio.o audio_aiff.o audio_cdda.o audio_hex.o audio_null.o audio_raw.o audio_snd.o audio_wave.o audio_alsa.o  -lasound     -lmad        -lid3tag -lm 
+mkdir .libs
+gcc -Wall -march=i486 -g -O2 -o madplay madplay.o getopt.o getopt1.o version.o resample.o filter.o tag.o crc.o rgain.o player.o audio.o audio_aiff.o audio_cdda.o audio_hex.o audio_null.o audio_raw.o audio_snd.o audio_wave.o audio_alsa.o  -lasound -lmad /usr/lib/libid3tag.so -lz -lm
+make[2]:正在离开目录 `/home/danger/projects/mad/madplay-0.15.2b'
+make[1]:正在离开目录 `/home/danger/projects/mad/madplay-0.15.2b'
